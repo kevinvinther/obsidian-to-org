@@ -5,10 +5,20 @@ import yaml  # For yaml in markdown files
 
 
 def get_yaml_data(file_path):
+    """Get the YAML data from a Markdown file."""
     with open(file_path, "r") as file:
         content = file.read()
         yaml_data = re.findall(r"(?<=---\n).*(?=\n---)", content, re.DOTALL)[0]
         return yaml.load(yaml_data, Loader=yaml.FullLoader)
+
+
+def get_org_roam_file_name(yaml_data, file_name):
+    """Convert datetime.date to proper org-roam format."""
+    return (
+        yaml_data["created"].strftime("%Y%m%d%H%M%S")
+        + "-"
+        + file_name.replace(" ", "_")
+    )
 
 
 def parse_commandline_arguments():
