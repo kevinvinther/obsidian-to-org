@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import argparse  # For command-line argument parsing
 import re  # Regular expressions, for finding when the YAML begins and ends in markdown
+import os  # Traverse all files
 import yaml  # For yaml in markdown files
 import pypandoc  # Convert from markdown to org
-import os  # Traverse all files
 
 
 def get_yaml_data(file_path):
@@ -19,9 +19,27 @@ def get_org_roam_file_name(yaml_data, file_name):
     return (
         yaml_data["created"].strftime("%Y%m%d%H%M%S")
         + "-"
-        + file_name.replace(" ", "_").lower().rstrip(".md")
+        + file_name.replace(" ", "_").lower().replace(".md", "")
         + ".org"
     )
+
+
+def construct_header(yaml):
+    if hasattr(yaml, "aliases"):
+        if len(yaml.aliases) >= 1:
+            alias = get_aliases_roam_format(yaml)
+        else:
+            alias = ""
+    else:
+        alias = ""
+
+    result = """:PROPERTIES:
+:ID:    {}
+:ROAM_ALIASES: {}
+:END:\n""".format(
+        yaml["title"].lower().replace(" ", "_").rstrip(".md"), alias
+    )
+    return result
 
 
 def convert_to_org(file_path, output_path):
@@ -30,18 +48,10 @@ def convert_to_org(file_path, output_path):
     print(file_path + " -> " + output_path)
 
 
-def add_alias(aliases, org_file):
-    """Add alias to org files."""
+def get_aliases_roam_format(aliases):
+    """Create a string for aliases property"""
     formatted_aliases = [f'"{alias}"' for alias in aliases]
-
-    with open(org_file, "r") as f:
-        lines = f.readlines()
-    with open(org_file, "w") as f:
-        for i, line in enumerate(lines):
-            if line.startswith(":ID:"):
-                lines.insert(i + 1, f':ROAM_ALIASES: {" ".join(formatted_aliases)}\n')
-                break
-        f.write("".join(lines))
+    return f':ROAM_ALIASES: {" ".join(formatted_aliases)}\n'
 
 
 def add_math(org_file):
@@ -54,7 +64,6 @@ def add_math(org_file):
                 lines.insert(i + 1, "#+STARTUP: latexpreview\n")
                 break
         f.write("".join(lines))
-    print(org_file + " now has startup property latexpreview.")
 
 
 def parse_commandline_arguments():
@@ -83,23 +92,79 @@ def is_markdown_file(filename):
     return ext.lower() in [".md", ".markdown"]
 
 
+def remove_properties(file_path):
+    """Remove properties from org file."""
+    with open(file_path, "r") as f:
+        file_text = f.read()
+    # find all occurrences of :PROPERTIES: and :END:
+    start = file_text.find(":PROPERTIES:")
+    end = file_text.find(":END:")
+    while start != -1 and end != -1:
+        # remove the text between :PROPERTIES: and :END:
+        file_text = file_text[:start] + file_text[end + 5 :]
+        # find the next occurrence of :PROPERTIES: and :END:
+        start = file_text.find(":PROPERTIES:")
+        end = file_text.find(":END:")
+    with open(file_path, "w") as f:
+        f.write(file_text)
+
+
+def add_string_to_file_start(file_path, new_string):
+    """Adds string to start of file"""
+    with open(file_path, "r") as f:
+        file_text = f.read()
+
+    file_text = file_text.strip()
+    # Concatenate the new string with the contents of the file
+    updated_text = new_string + file_text
+    with open(file_path, "w") as f:
+        f.write(updated_text)
+
+
+def convert_wikilinks_to_org_links(file_path):
+    with open(file_path, "r") as f:
+        file_text = f.read()
+
+    # Regular expression pattern for wikilinks with and without aliases
+    pattern = r"\[\[([\w\s-]+)\|?([\w\s-]+)?\]\]"
+
+    # Find all matches of the pattern in the file text
+    matches = re.findall(pattern, file_text)
+
+    # Loop through the matches and create new links
+    for match in matches:
+        link_text = match[1] if match[1] else match[0]
+        link_id = match[0].lower().replace(" ", "-")
+        new_link = f"[[id:{link_id}][{link_text}]]"
+        # Replace the old link with the new one in the file text
+        file_text = file_text.replace(f"[[{match[0]}]]", new_link)
+
+    # Write the updated file text back to the file
+    with open(file_path, "w") as f:
+        f.write(file_text)
+
+
 if __name__ == "__main__":
     args = parse_commandline_arguments()
     for filename in os.listdir(args.input_folder):
         filepath = os.path.join(args.input_folder, filename)
         if os.path.isfile(filepath):
-            # Do something with the file
+            # Convert!
             if is_markdown_file(filename):
+                print(filename)
                 file_yaml = get_yaml_data(filepath)
                 new_path = args.output_folder + get_org_roam_file_name(
                     file_yaml, filename
                 )
                 convert_to_org(filepath, new_path)
-                if hasattr(file_yaml, "aliases"):
-                    if len(file_yaml.aliases) >= 1:
-                        add_alias(file_yaml.aliases, new_path)
+                remove_properties(new_path)
+                add_string_to_file_start(
+                    new_path, ("#+title: " + file_yaml["title"] + "\n")
+                )
+                add_string_to_file_start(new_path, construct_header(file_yaml))
                 if args.math:
                     add_math(new_path)
+                convert_wikilinks_to_org_links(new_path)
 
         elif os.path.isdir(filepath):
             # Recursively traverse subdirectories
@@ -108,11 +173,4 @@ if __name__ == "__main__":
                 if os.path.isfile(subfilepath):
                     # Do something with the file
                     if is_markdown_file(filename):
-                        file_yaml = get_yaml_data(filepath)
-                        new_path = args.output_folder + get_org_roam_file_name(
-                            file_yaml, filename
-                        )
-                        convert_to_org(filepath, new_path)
-                        add_alias(file_yaml.aliases, new_path)
-                        if args.math:
-                            add_math(new_path)
+                        print("TODO: Implement")
