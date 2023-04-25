@@ -81,6 +81,22 @@ def add_math(org_file):
         f.write("".join(lines))
 
 
+def add_tags(org_file, yaml):
+    """Add tags to org_file header."""
+    if yaml is None or yaml["tags"] is None or not yaml["tags"] or None in yaml["tags"]:
+        return
+    with open(org_file, "r") as f:
+        lines = f.readlines()
+    with open(org_file, "w") as f:
+        for i, line in enumerate(lines):
+            if line.startswith(":END:"):
+                output = "#+filetags: :" + ":".join(yaml["tags"]) + ":"
+                print(output)
+                lines.insert(i + 1, f"{output}\n")
+                break
+        f.write("".join(lines))
+
+
 def parse_commandline_arguments():
     """Parse the commandline arguments."""
     parser = argparse.ArgumentParser(
@@ -178,6 +194,7 @@ def process_file(filename, args):
                 new_path, ("#+title: " + file_yaml["title"] + "\n")
             )
             add_string_to_file_start(new_path, construct_header(file_yaml))
+            add_tags(new_path, file_yaml)
             if args.math:
                 add_math(new_path)
             convert_wikilinks_to_org_links(new_path)
