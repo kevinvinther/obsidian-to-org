@@ -50,7 +50,7 @@ def construct_header(yaml):
 :ID:    {}
 :ROAM_ALIASES: {}
 :END:\n""".format(
-        yaml["title"].lower().replace(" ", "_").rstrip(".md"), alias
+        yaml["title"].lower().replace(" ", "-").rstrip(".md"), alias
     )
     return result
 
@@ -144,7 +144,7 @@ def convert_wikilinks_to_org_links(file_path):
         file_text = f.read()
 
     # Regular expression pattern for wikilinks with and without aliases
-    pattern = r"\[\[([\w\s-]+)\|?([\w\s-]+)?\]\]"
+    pattern = r"\[\[([^\]]+)\|?([^\]]+)?\]\]"
 
     # Find all matches of the pattern in the file text
     matches = re.findall(pattern, file_text)
