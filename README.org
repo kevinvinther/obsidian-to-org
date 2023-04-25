@@ -1,3 +1,14 @@
 #+title: Obsidian to Org
 
-This is an attempt at making a script to convert an Obsidian vault to org-roam formatted files.
+This small script allows you to convert an entire Obsidian (or any other markdown-centered) directory to an org-roam centered directory.
+
+** Usage
+#+begin_src python
+python main.py [-h] [--math] input_folder output_folder
+#+end_src
+The files in the input folder will be converted and put in the output folder. I would advise against making the input folder your Obsidian vault, instead of making a copy which you just delete after the program has run. The converted files will all be put in the output folder.
+The =--math= flag adds =#+PROPERTY: latexpreview= to all the converted files, such that they automatically preview Latex equations.
+
+** Todo
+- Implement tags properly
+  - Currently the tags don't convert to anything.
