@@ -57,7 +57,9 @@ def construct_header(yaml):
 
 def convert_to_org(file_path, output_path):
     """Convert file from markdown to org and print location."""
-    pypandoc.convert_file(file_path, "org", outputfile=output_path)
+    pypandoc.convert_file(
+        file_path, "org", outputfile=output_path, extra_args=["--wrap=none"]
+    )
     print(file_path + " -> " + output_path)
 
 
