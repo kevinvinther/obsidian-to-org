@@ -2,6 +2,35 @@
 
 This small script allows you to convert an entire Obsidian (or any other markdown-centered) directory to an org-roam centered directory.
 
+** Before using
+To use this script, your notes need to have a specific format. This format can be enforced with the Obsidian plugin /linter/. These are the options needed to get the desired format:
+- General
+  - Default escape character: ="=
+  - Number of dollar signs to indicate math block: =2=
+- YAML
+  - Remove Hashtags from tags in the YAML frontmatter, as they make the tags there invalid: =true=
+  - Format yaml aliases section: =true=
+  - Default yaml array section style: =multi-line=
+  - Inserts the given YAML attributes into the YAML frontmatter. Put each attribute on a single line: =true=
+  - Text to insert:
+#+begin_src
+aliases:
+tags:
+#+end_src
+- YAML
+  - Move all tags to Yaml frontmatter of the document: =true=
+  - Keep track of the date the file was last edited in the YAML front matter. Gets dates from file metadata: =true=
+  - Date Created: =true=
+  - Date Created Key: =created=
+  - Date Modified: =true=
+  - Date Modified Key: =modified=
+  - Format: =YYYY-MM-DD=
+  - Inserts the title of the file into the YAML frontmatter. Gets the title form the first H1 or filename if there is no H1: =true=
+  - Title Key: =title=
+- Spacing
+  - Removes leading and trailing blank lines in the YAML front matter: =true=
+
+When these options have been changed, run Linter: Lint all files in the vault, and you can run this script afterwards.
 ** Usage
 #+begin_src python
 python main.py [-h] [--math] input_folder output_folder
