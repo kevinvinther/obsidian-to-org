@@ -170,7 +170,6 @@ def process_file(filename, args):
     if os.path.isfile(filepath):
         # Convert!
         if is_markdown_file(filename):
-            print(filename)
             file_yaml = get_yaml_data(filepath)
             new_path = args.output_folder + get_org_roam_file_name(file_yaml, filename)
             convert_to_org(filepath, new_path)
