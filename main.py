@@ -38,9 +38,9 @@ def get_org_roam_file_name(yaml_data, file_name):
 
 def construct_header(yaml):
     """Construct the header for the org file."""
-    if hasattr(yaml, "aliases"):
-        if len(yaml.aliases) >= 1:
-            alias = get_aliases_roam_format(yaml)
+    if yaml["aliases"] is not None and None not in yaml["aliases"]:
+        if len(yaml["aliases"]) >= 1:
+            alias = get_aliases_roam_format(yaml["aliases"])
         else:
             alias = ""
     else:
@@ -63,10 +63,25 @@ def convert_to_org(file_path, output_path):
     print(file_path + " -> " + output_path)
 
 
+def convert_dict_to_string(alias_dict):
+    """Convert a dictionary to a string."""
+    return ", ".join(f'"{key}: {value}"' for key, value in alias_dict.items())
+
+
 def get_aliases_roam_format(aliases):
     """Create a string for aliases property."""
-    formatted_aliases = [f'"{alias}"' for alias in aliases]
-    return f':ROAM_ALIASES: {" ".join(formatted_aliases)}\n'
+    # I apologize for these lines
+    # If the alias is a dictionary, convert it to a string
+    # If the alias is a string, check if it has spaces, if so, add quotes
+    # If the alias is a string without spaces, leave it as is
+    formatted_aliases = [
+        convert_dict_to_string(alias)
+        if isinstance(alias, dict)
+        else (f'"{alias}"' if " " in alias else alias)
+        for alias in aliases
+    ]
+    print(formatted_aliases)
+    return f'{" ".join(formatted_aliases)}'
 
 
 def add_math(org_file):
