@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
-import argparse  # For command-line argument parsing
-import re  # Regular expressions, for finding when the YAML begins and ends in markdown
-import os  # Traverse all files
-import yaml  # For yaml in markdown files
-import pypandoc  # Convert from markdown to org
+# For command - line argument parsing
+import argparse
+
+# Regular expressions, for finding when the YAML begins and ends in markdown
+import re
+
+# Traverse all files
+import os
+
+# For yaml in markdown files
+import yaml
+
+# Convert from markdown to org
+import pypandoc
+
+# Multiprocessingg
+import multiprocessing as mp
 
 
 def get_yaml_data(file_path):
     """Get the YAML data from a Markdown file."""
     with open(file_path, "r") as file:
         content = file.read()
-        yaml_data = re.findall(r"(?<=---\n).*(?=\n---)", content, re.DOTALL)[0]
+        yaml_data = re.findall(r"(?<=---\n).*?(?=\n---)", content, re.DOTALL)[0]
         return yaml.load(yaml_data, Loader=yaml.FullLoader)
 
 
@@ -25,6 +37,7 @@ def get_org_roam_file_name(yaml_data, file_name):
 
 
 def construct_header(yaml):
+    """Construct the header for the org file."""
     if hasattr(yaml, "aliases"):
         if len(yaml.aliases) >= 1:
             alias = get_aliases_roam_format(yaml)
@@ -49,7 +62,7 @@ def convert_to_org(file_path, output_path):
 
 
 def get_aliases_roam_format(aliases):
-    """Create a string for aliases property"""
+    """Create a string for aliases property."""
     formatted_aliases = [f'"{alias}"' for alias in aliases]
     return f':ROAM_ALIASES: {" ".join(formatted_aliases)}\n'
 
@@ -69,9 +82,13 @@ def add_math(org_file):
 def parse_commandline_arguments():
     """Parse the commandline arguments."""
     parser = argparse.ArgumentParser(
-        description="Convert your Obsidian vault to Org-roam compatible org-files."
+        description="""Convert your Obsidian vault to
+                        Org-roam compatible org-files."""
     )
-    parser.add_argument("input_folder", help="Your Obsidian Vault (Remember to Backup)")
+    parser.add_argument(
+        "input_folder",
+        help="Your Obsidian Vault (Remember to Backup)",
+    )
     parser.add_argument(
         "output_folder", help="The Folder which The Org Files will Output To"
     )
@@ -110,7 +127,7 @@ def remove_properties(file_path):
 
 
 def add_string_to_file_start(file_path, new_string):
-    """Adds string to start of file"""
+    """Add string to start of file."""
     with open(file_path, "r") as f:
         file_text = f.read()
 
@@ -122,6 +139,7 @@ def add_string_to_file_start(file_path, new_string):
 
 
 def convert_wikilinks_to_org_links(file_path):
+    """Convert wikilinks to org links."""
     with open(file_path, "r") as f:
         file_text = f.read()
 
@@ -144,33 +162,40 @@ def convert_wikilinks_to_org_links(file_path):
         f.write(file_text)
 
 
+def process_file(filename, args):
+    """Process a file."""
+    filepath = os.path.join(args.input_folder, filename)
+    if os.path.isfile(filepath):
+        # Convert!
+        if is_markdown_file(filename):
+            print(filename)
+            file_yaml = get_yaml_data(filepath)
+            new_path = args.output_folder + get_org_roam_file_name(file_yaml, filename)
+            convert_to_org(filepath, new_path)
+            remove_properties(new_path)
+            add_string_to_file_start(
+                new_path, ("#+title: " + file_yaml["title"] + "\n")
+            )
+            add_string_to_file_start(new_path, construct_header(file_yaml))
+            if args.math:
+                add_math(new_path)
+            convert_wikilinks_to_org_links(new_path)
+
+    elif os.path.isdir(filepath):
+        # Recursively traverse subdirectories
+        for subfilename in os.listdir(filepath):
+            process_file(subfilename, args)
+
+
+def process_file_wrapper(args):
+    """Wrap process_file to allow for multiprocessing."""
+    return process_file(*args)
+
+
 if __name__ == "__main__":
     args = parse_commandline_arguments()
-    for filename in os.listdir(args.input_folder):
-        filepath = os.path.join(args.input_folder, filename)
-        if os.path.isfile(filepath):
-            # Convert!
-            if is_markdown_file(filename):
-                print(filename)
-                file_yaml = get_yaml_data(filepath)
-                new_path = args.output_folder + get_org_roam_file_name(
-                    file_yaml, filename
-                )
-                convert_to_org(filepath, new_path)
-                remove_properties(new_path)
-                add_string_to_file_start(
-                    new_path, ("#+title: " + file_yaml["title"] + "\n")
-                )
-                add_string_to_file_start(new_path, construct_header(file_yaml))
-                if args.math:
-                    add_math(new_path)
-                convert_wikilinks_to_org_links(new_path)
+    filenames = os.listdir(args.input_folder)
 
-        elif os.path.isdir(filepath):
-            # Recursively traverse subdirectories
-            for subfilename in os.listdir(filepath):
-                subfilepath = os.path.join(filepath, subfilename)
-                if os.path.isfile(subfilepath):
-                    # Do something with the file
-                    if is_markdown_file(filename):
-                        print("TODO: Implement")
+    # Using multiprocessing Pool
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        pool.map(process_file_wrapper, [(filename, args) for filename in filenames])
