@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
+"""Convert your Obsidian vault to Org-roam compatible org-files."""
 # For command - line argument parsing
 import argparse
-
+# Multiprocessing
+import multiprocessing as mp
+# Traverse all files
+import os
 # Regular expressions, for finding when the YAML begins and ends in markdown
 import re
 
-# Traverse all files
-import os
-
-# For yaml in markdown files
-import yaml
-
 # Convert from markdown to org
 import pypandoc
-
-# Multiprocessingg
-import multiprocessing as mp
+# For yaml in markdown files
+import yaml
 
 
 def get_yaml_data(file_path):
