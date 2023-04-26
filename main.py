@@ -177,18 +177,15 @@ def convert_wikilinks_to_org_links(file_path):
         file_text = f.read()
 
     # Regular expression pattern for wikilinks with and without aliases
-    pattern = r"\[\[([^\]]+)\|?([^\]]+)?\]\]"
+    pattern = r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]"
 
-    # Find all matches of the pattern in the file text
-    matches = re.findall(pattern, file_text)
+    def link_replacer(match):
+        link_id = match.group(1).replace(" ", "-").lower()
+        link_text = match.group(2) if match.group(2) else match.group(1)
+        return f"[[id:{link_id}][{link_text}]]"
 
-    # Loop through the matches and create new links
-    for match in matches:
-        link_text = match[1] if match[1] else match[0]
-        link_id = match[0].lower().replace(" ", "-")
-        new_link = f"[[id:{link_id}][{link_text}]]"
-        # Replace the old link with the new one in the file text
-        file_text = file_text.replace(f"[[{match[0]}]]", new_link)
+    # Replace wikilinks with org links using a custom replacement function
+    file_text = re.sub(pattern, link_replacer, file_text)
 
     # Write the updated file text back to the file
     with open(file_path, "w") as f:
